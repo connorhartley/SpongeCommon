@@ -20,7 +20,12 @@
         "entity.item.minecart.MinecartCommandBlockEntity_MinecartCommandLogicMixin",
         "entity.player.PlayerEntityMixin",
         "entity.player.ServerPlayerEntityMixin",
+        "network.handshake.ServerHandshakeNetHandlerMixin",
+        "network.login.ServerLoginNetHandler_2Mixin",
+        "network.login.ServerLoginNetHandlerMixin",
+        "network.play.ServerPlayNetHandlerMixin",
         "network.rcon.RConConsoleSourceMixin",
+        "network.NetworkManagerMixin",
         "server.CustomServerBossInfoMixin",
         "server.MinecraftServerMixin",
         "server.management.PlayerProfileCacheMixin",
@@ -38,6 +43,9 @@
         "world.storage.WorldInfoMixin"
     ],
     "client": [
+        "client.network.handshake.ClientHandshakeNetHandlerMixin",
+        "client.network.login.ClientLoginNetHandlerMixin",
+        "client.network.play.ClientPlayNetHandlerMixin",
         "client.MinecraftMixin"
     ],
     "server": [
