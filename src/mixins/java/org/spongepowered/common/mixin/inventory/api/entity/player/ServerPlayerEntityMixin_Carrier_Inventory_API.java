@@ -25,10 +25,16 @@
 package org.spongepowered.common.mixin.inventory.api.entity.player;
 
 import net.minecraft.entity.player.PlayerEntity;
+import net.minecraft.entity.player.PlayerInventory;
 import net.minecraft.entity.player.ServerPlayerEntity;
+import net.minecraft.inventory.container.Container;
+import net.minecraft.inventory.container.INamedContainerProvider;
 import org.spongepowered.api.item.inventory.Carrier;
 import org.spongepowered.api.item.inventory.type.CarriedInventory;
 import org.spongepowered.asm.mixin.Mixin;
+import org.spongepowered.asm.mixin.injection.At;
+import org.spongepowered.asm.mixin.injection.Redirect;
+import org.spongepowered.common.inventory.util.ContainerTests;
 
 @Mixin(ServerPlayerEntity.class)
 public abstract class ServerPlayerEntityMixin_Carrier_Inventory_API implements Carrier {
@@ -36,6 +42,13 @@ public abstract class ServerPlayerEntityMixin_Carrier_Inventory_API implements C
     @Override
     public CarriedInventory<? extends Carrier> getInventory() {
         return (CarriedInventory<? extends Carrier>) ((PlayerEntity) (Object)this).inventory;
+    }
+
+    @Redirect(method = "openContainer", at = @At(value = "INVOKE", target = "Lnet/minecraft/inventory/container/INamedContainerProvider;createMenu(ILnet/minecraft/entity/player/PlayerInventory;Lnet/minecraft/entity/player/PlayerEntity;)Lnet/minecraft/inventory/container/Container;"))
+    public Container onCreateMenu(INamedContainerProvider provider, int p_createMenu_1_, PlayerInventory p_createMenu_2_,
+            PlayerEntity p_createMenu_3_) {
+        Container container = provider.createMenu(p_createMenu_1_, p_createMenu_2_, p_createMenu_3_);
+        return ContainerTests.doStuff(container, p_createMenu_3_);
     }
 
 }
