@@ -66,6 +66,7 @@ import org.spongepowered.api.advancement.AdvancementTree;
 import org.spongepowered.api.command.parameter.managed.clientcompletion.ClientCompletionType;
 import org.spongepowered.api.command.parameter.managed.standard.CatalogedValueParameter;
 import org.spongepowered.api.command.registrar.CommandRegistrar;
+import org.spongepowered.api.data.Key;
 import org.spongepowered.api.data.persistence.DataTranslator;
 import org.spongepowered.api.data.type.ArmorMaterial;
 import org.spongepowered.api.data.type.BannerPatternShape;
@@ -210,6 +211,10 @@ public final class SpongeCatalogRegistry implements CatalogRegistry {
     @Override
     public <T extends CatalogType, E extends T> Supplier<E> provideSupplier(final Class<T> catalogClass, final String suggestedId) {
         Preconditions.checkNotNull(suggestedId);
+
+        if (catalogClass == Key.class) {
+            return () -> null;
+        }
 
         final Map<String, Supplier<CatalogType>> catalogSuppliers = this.suppliers.get(catalogClass);
         if (catalogSuppliers == null) {
