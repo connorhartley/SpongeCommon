@@ -57,6 +57,9 @@ public final class ContainerTypeSupplier {
             .registerSupplier(ContainerType.class, "smoker", () -> (ContainerType) net.minecraft.inventory.container.ContainerType.SMOKER)
             .registerSupplier(ContainerType.class, "cartography", () -> (ContainerType) net.minecraft.inventory.container.ContainerType.CARTOGRAPHY)
             .registerSupplier(ContainerType.class, "stonecutter", () -> (ContainerType) net.minecraft.inventory.container.ContainerType.STONECUTTER)
+
+            // TODO special container types
+            .registerSupplier(ContainerType.class, "horse", () -> null)
         ;
     }
 }
