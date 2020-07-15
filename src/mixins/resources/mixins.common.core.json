@@ -20,7 +20,10 @@
         "server.management.PlayerProfileCacheMixin",
         "service.permission.SubjectMixin",
         "world.dimension.DimensionTypeMixin",
-        "util.datafix.versions.V1125Mixin"
+        "util.datafix.versions.V1125Mixin",
+
+
+        "data.CustomDataHolderMixin"
     ],
     "client": [
         "client.MinecraftMixin"
