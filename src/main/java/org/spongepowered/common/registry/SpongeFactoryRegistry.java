@@ -30,6 +30,7 @@ import co.aikar.timings.TimingsFactory;
 import com.google.inject.Singleton;
 import it.unimi.dsi.fastutil.objects.Object2ObjectArrayMap;
 import org.spongepowered.api.advancement.criteria.AdvancementCriterion;
+import org.spongepowered.api.command.CommandCause;
 import org.spongepowered.api.command.parameter.Parameter;
 import org.spongepowered.api.command.parameter.managed.standard.VariableValueParameters;
 import org.spongepowered.api.command.registrar.tree.CommandTreeBuilder;
@@ -40,6 +41,7 @@ import org.spongepowered.api.registry.UnknownTypeException;
 import org.spongepowered.api.resourcepack.ResourcePack;
 import org.spongepowered.api.text.serializer.TextSerializers;
 import org.spongepowered.api.util.Transform;
+import org.spongepowered.common.command.manager.SpongeCommandCauseFactory;
 import org.spongepowered.common.command.parameter.SpongeParameterValueFactory;
 import org.spongepowered.common.command.parameter.managed.factory.SpongeVariableValueParameterBuilderFactory;
 import org.spongepowered.common.command.registrar.tree.SpongeRootCommandTreeBuilderFactory;
@@ -48,8 +50,6 @@ import org.spongepowered.common.registry.type.advancement.SpongeAdvancementCrite
 import org.spongepowered.common.relocate.co.aikar.timings.SpongeTimingsFactory;
 import org.spongepowered.common.resourcepack.SpongeResourcePackFactory;
 import org.spongepowered.common.text.serializer.SpongeTextSerializerFactory;
-import org.spongepowered.api.command.CommandCause;
-import org.spongepowered.common.command.manager.SpongeCommandCauseFactory;
 import org.spongepowered.common.util.SpongeTransformFactory;
 
 import java.util.Map;

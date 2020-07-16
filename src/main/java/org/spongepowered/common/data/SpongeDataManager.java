@@ -308,7 +308,7 @@ public final class SpongeDataManager implements DataManager {
         }
     }
 
-    private Optional<SpongeDataRegistration> getDataRegistration(Key<?> key) {
+    public Optional<SpongeDataRegistration> getDataRegistration(Key<?> key) {
         return Optional.ofNullable(this.registrationByKey.get(key));
     }
 
