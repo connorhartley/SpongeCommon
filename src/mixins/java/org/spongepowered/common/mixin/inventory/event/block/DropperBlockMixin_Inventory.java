@@ -68,14 +68,14 @@ public abstract class DropperBlockMixin_Inventory {
     /* TODO
     @Surrogate
     private void afterDispense(final World worldIn, final BlockPos pos, final CallbackInfo callbackInfo,
-            final ProxyBlockSource blocksourceimpl, final DispenserTileEntity tileentitydispenser, final int i, final ItemStack itemstack,
+            final ProxyBlockSource proxyblocksource, final DispenserTileEntity dispensertileentity, final int i, final ItemStack itemstack,
             final ItemStack itemstack1) {
         // after setInventorySlotContents
-        tileentitydispenser.setInventorySlotContents(i, itemstack1);
+        dispensertileentity.setInventorySlotContents(i, itemstack1);
         // Transfer worked if remainder is one less than the original stack
         if (itemstack1.getCount() == itemstack.getCount() - 1) {
-            final TrackedInventoryBridge capture = impl$forCapture(tileentitydispenser);
-            final Inventory sourceInv = ((Inventory) tileentitydispenser);
+            final TrackedInventoryBridge capture = impl$forCapture(dispensertileentity);
+            final Inventory sourceInv = ((Inventory) dispensertileentity);
             SlotTransaction sourceSlotTransaction = InventoryEventFactory.captureTransaction(capture, sourceInv, i, itemstack);
             final Direction enumfacing = worldIn.getBlockState(pos).get(DispenserBlock.FACING);
             final BlockPos blockpos = pos.offset(enumfacing);
