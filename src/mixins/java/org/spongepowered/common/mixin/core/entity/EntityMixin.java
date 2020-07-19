@@ -24,6 +24,7 @@
  */
 package org.spongepowered.common.mixin.core.entity;
 
+import co.aikar.timings.Timing;
 import net.minecraft.command.CommandSource;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityType;
@@ -51,6 +52,7 @@ import org.spongepowered.common.bridge.command.CommandSourceProviderBridge;
 import org.spongepowered.common.bridge.data.InvulnerableTrackedBridge;
 import org.spongepowered.common.bridge.data.VanishableBridge;
 import org.spongepowered.common.bridge.entity.EntityBridge;
+import org.spongepowered.common.bridge.entity.EntityTypeBridge;
 import org.spongepowered.common.bridge.entity.GrieferBridge;
 import org.spongepowered.common.data.SpongeDataManager;
 import org.spongepowered.common.util.Constants;
@@ -59,7 +61,7 @@ import java.util.List;
 import java.util.Random;
 
 @Mixin(Entity.class)
-public abstract class EntityMixin implements EntityBridge, TrackableBridge, VanishableBridge, InvulnerableTrackedBridge, TimingBridge,
+public abstract class EntityMixin implements EntityBridge, VanishableBridge, InvulnerableTrackedBridge, TimingBridge,
         CommandSourceProviderBridge {
 
     // @formatter:off
@@ -118,12 +120,10 @@ public abstract class EntityMixin implements EntityBridge, TrackableBridge, Vani
     private boolean impl$isConstructing = true;
     @Nullable private Text impl$displayName;
     @Nullable private BlockPos impl$lastCollidedBlockPos;
-    private boolean impl$trackedInWorld = false;
     private boolean vanish$collision = false;
     private boolean vanish$untargetable = false;
     private boolean vanish$isVanished = false;
     private boolean vanish$pendingVisibilityUpdate = false;
-    @Nullable private Cause impl$destructCause;
     private int impl$customFireImmuneTicks = this.shadow$getFireImmuneTicks();
     private boolean impl$skipSettingCustomNameTag = false;
     private int vanish$visibilityTicks = 0;
@@ -141,26 +141,6 @@ public abstract class EntityMixin implements EntityBridge, TrackableBridge, Vani
         this.impl$isConstructing = false;
     }
 
-    @Override
-    public boolean bridge$isWorldTracked() {
-        return this.impl$trackedInWorld;
-    }
-
-    @Override
-    public void bridge$setWorldTracked(final boolean tracked) {
-        this.impl$trackedInWorld = tracked;
-        // Since this is called during removeEntity from world, we can
-        // post the removal event here, basically.
-        if (!tracked && this.impl$destructCause != null) {
-            final MessageChannel originalChannel = MessageChannel.toNone();
-            SpongeCommon.postEvent(SpongeEventFactory.createDestructEntityEvent(
-                this.impl$destructCause, originalChannel, Optional.of(originalChannel),
-                (org.spongepowered.api.entity.Entity) this, new MessageEvent.MessageFormatter(), true
-            ));
-
-            this.impl$destructCause = null;
-        }
-    }
 
     @Inject(method = "startRiding(Lnet/minecraft/entity/Entity;Z)Z",
         at = @At(
@@ -690,20 +670,12 @@ public abstract class EntityMixin implements EntityBridge, TrackableBridge, Vani
     public BlockPos bridge$getLastCollidedBlockPos() {
         return this.impl$lastCollidedBlockPos;
     }
-
+*/
     @Override
     public Timing bridge$getTimingsHandler() {
         return ((EntityTypeBridge) this.shadow$getType()).bridge$getTimings();
     }
-
-    @Override
-    public boolean bridge$shouldTick() {
-        final ChunkBridge chunk = ((ActiveChunkReferantBridge) this).bridge$getActiveChunk();
-        // Don't tick if chunk is queued for unload or is in progress of being scheduled for unload
-        // See https://github.com/SpongePowered/SpongeVanilla/issues/344
-        return chunk == null || chunk.bridge$isActive();
-    }
-
+/*
     @Override
     public void bridge$setInvulnerable(final boolean value) {
         this.invulnerable = value;

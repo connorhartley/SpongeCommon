@@ -95,6 +95,7 @@ public abstract class BlockMixin implements BlockBridge, TrackableBridge, Timing
      * We captured the dye color when creating the Block.Properties.
      * As the Properties objects are discarded we transfer it over to the Block itself now.
      */
+/*
     @Inject(method = "<init>", at = @At("RETURN"))
     private void impl$setUpSpongeFields(Block.Properties properties, CallbackInfo ci) {
         ((DyeColorBlockBridge)this).bridge$setDyeColor(((DyeColorBlockBridge)properties).bridge$getDyeColor().orElse(null));
@@ -126,7 +127,7 @@ public abstract class BlockMixin implements BlockBridge, TrackableBridge, Timing
             }
         }
     }
-
+*/
 
     @Override
     public boolean bridge$isVanilla() {
@@ -190,6 +191,7 @@ public abstract class BlockMixin implements BlockBridge, TrackableBridge, Timing
         return this.impl$shouldFireBlockEvents;
     }
 
+    /*
     @SuppressWarnings("ConstantConditions")
     @Override
     public void bridge$initializeTrackerState() {
@@ -287,4 +289,5 @@ public abstract class BlockMixin implements BlockBridge, TrackableBridge, Timing
             trackerConfigAdapter.save();
         }
     }
+     */
 }

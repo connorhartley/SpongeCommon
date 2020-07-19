@@ -47,9 +47,8 @@ public class SpongeLocatableBlockBuilder extends AbstractDataBuilder<LocatableBl
 
     Supplier<? extends BlockState> blockState;
     Supplier<? extends Vector3i> position;
-    Supplier<? extends UUID> worldId;
+    Supplier<UUID> worldId;
     Supplier<? extends WeakReference<ServerWorld>> worldReference;
-
 
     public SpongeLocatableBlockBuilder() {
         super(LocatableBlock.class, 1);
@@ -109,7 +108,7 @@ public class SpongeLocatableBlockBuilder extends AbstractDataBuilder<LocatableBl
         checkNotNull(this.position, "Position cannot be null!");
         checkNotNull(this.worldId, "World UUID cannot be null!");
         checkNotNull(this.worldReference, "World reference cannot be null!");
-        throw new UnsupportedOperationException("implement me");
+        return new SpongeLocatableBlock(this);
     }
 
     @Override

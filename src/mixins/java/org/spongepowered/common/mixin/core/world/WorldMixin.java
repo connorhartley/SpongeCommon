@@ -24,44 +24,26 @@
  */
 package org.spongepowered.common.mixin.core.world;
 
-import net.minecraft.block.BlockState;
-import net.minecraft.block.Blocks;
-import net.minecraft.entity.Entity;
-import net.minecraft.tileentity.ITickableTileEntity;
-import net.minecraft.tileentity.TileEntity;
-import net.minecraft.util.math.BlockPos;
 import net.minecraft.world.IWorld;
-import net.minecraft.world.chunk.Chunk;
-import net.minecraft.world.chunk.IChunk;
 import net.minecraft.world.dimension.Dimension;
 import net.minecraft.world.storage.WorldInfo;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
-import org.spongepowered.asm.mixin.Overwrite;
 import org.spongepowered.asm.mixin.Shadow;
-import org.spongepowered.asm.mixin.injection.At;
-import org.spongepowered.asm.mixin.injection.Inject;
-import org.spongepowered.asm.mixin.injection.Redirect;
-import org.spongepowered.asm.mixin.injection.Slice;
-import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
-import org.spongepowered.common.bridge.tileentity.TileEntityTypeBridge;
-import org.spongepowered.common.bridge.util.math.BlockPosBridge;
 import org.spongepowered.common.bridge.world.ServerWorldBridge;
 import org.spongepowered.common.bridge.world.WorldBridge;
 
-import java.util.List;
 import java.util.Random;
-import java.util.function.Consumer;
 
 @Mixin(net.minecraft.world.World.class)
 public abstract class WorldMixin implements WorldBridge, IWorld {
 
+    // @formatter: off
     @Shadow @Final public boolean isRemote;
     @Shadow @Final protected WorldInfo worldInfo;
     @Shadow @Final public Dimension dimension;
-
-
     @Shadow @Final public Random rand;
+    // @formatter on
     private boolean impl$isDefinitelyFake = false;
     private boolean impl$hasChecked = false;
 
@@ -79,35 +61,5 @@ public abstract class WorldMixin implements WorldBridge, IWorld {
     public void bridge$clearFakeCheck() {
         this.impl$hasChecked = false;
     }
-
-    @SuppressWarnings("deprecation")
-    @Override
-    public boolean bridge$isAreaLoaded(final int xStart, final int yStart, final int zStart, final int xEnd, final int yEnd, final int zEnd, final boolean allowEmpty) {
-        return this.isAreaLoaded(xStart, yStart, zStart, xEnd, yEnd, zEnd);
-    }
-
-    @Inject(method = "destroyBlock", at = @At(value = "INVOKE", target = "Lnet/minecraft/world/World;playEvent(ILnet/minecraft/util/math/BlockPos;I)V"), cancellable = true)
-    public void onDestroyBlock(final BlockPos pos, final boolean dropBlock, final CallbackInfoReturnable<Boolean> cir) {
-
-    }
-
-    @Redirect(method = "addTileEntity",
-            at = @At(value = "INVOKE", target = "Ljava/util/List;add(Ljava/lang/Object;)Z", remap = false),
-            slice = @Slice(from = @At(value = "FIELD", target = "Lnet/minecraft/world/World;tickableTileEntities:Ljava/util/List;"),
-                           to =   @At(value = "FIELD", target = "Lnet/minecraft/world/World;isRemote:Z")))
-    private boolean onAddTileEntity(final List<? super TileEntity> list, final Object tile) {
-        if (!this.bridge$isFake() && !this.canTileUpdate((TileEntity) tile)) {
-            return false;
-        }
-
-        return list.add((TileEntity) tile);
-    }
-
-    @SuppressWarnings("ConstantConditions")
-    private boolean canTileUpdate(final TileEntity tile) {
-        final org.spongepowered.api.block.entity.BlockEntity spongeTile = (org.spongepowered.api.block.entity.BlockEntity) tile;
-        return spongeTile.getType() == null || ((TileEntityTypeBridge) spongeTile.getType()).bridge$canTick();
-    }
-
 
 }

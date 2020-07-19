@@ -251,7 +251,7 @@ public final class PhasePrinter {
             }
         }
         final PrettyPrinter printer = new PrettyPrinter(60).add("Exception occurred during a PhaseState").centre().hr()
-            .addWrapped("Sponge's tracking system makes a best effort to not throw exceptions randomly but sometimes it is inevitable. In most "
+            .add("Sponge's tracking system makes a best effort to not throw exceptions randomly but sometimes it is inevitable. In most "
                     + "cases, something else triggered this exception and Sponge prevented a crash by catching it. The following stacktrace can be "
                     + "used to help pinpoint the cause.").hr()
             .add("The PhaseState having an exception: %s", context.state)

@@ -52,6 +52,8 @@ import net.minecraft.world.chunk.IChunk;
 import net.minecraft.world.server.ChunkHolder;
 import net.minecraft.world.server.ServerWorld;
 import org.apache.logging.log4j.Level;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 import org.checkerframework.framework.qual.DefaultQualifier;
@@ -126,6 +128,7 @@ public final class PhaseTracker implements CauseStackManager {
 
     public static final PhaseTracker CLIENT = new PhaseTracker();
     public static final PhaseTracker SERVER = new PhaseTracker();
+    public static final Logger LOGGER = LogManager.getLogger();
     static final CopyOnWriteArrayList<net.minecraft.entity.Entity> ASYNC_CAPTURED_ENTITIES = new CopyOnWriteArrayList<>();
     private static final Map<Thread, PhaseTracker> SPINOFF_TRACKERS = new MapMaker().weakKeys().concurrencyLevel(8).makeMap();
     private static final boolean DEBUG_CAUSE_FRAMES = Boolean.parseBoolean(System.getProperty("sponge.debugcauseframes", "false"));

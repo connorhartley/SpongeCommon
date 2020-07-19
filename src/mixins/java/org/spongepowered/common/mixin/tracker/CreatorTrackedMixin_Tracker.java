@@ -140,23 +140,23 @@ public abstract class CreatorTrackedMixin_Tracker implements CreatorTrackedBridg
         } else if (PlayerTracker.Type.NOTIFIER == type) {
             this.tracker$notifier = uuid;
         }
-        if (((DataCompoundHolder) this).data$hasSpongeCompound()) {
-            final CompoundNBT spongeData = ((DataCompoundHolder) this).data$getSpongeDataCompound();
-            if (uuid == null) {
-                if (spongeData.contains(type.compoundKey)) {
-                    spongeData.remove(type.compoundKey);
-                }
-                return;
-            }
-            if (!spongeData.contains(type.compoundKey)) {
-                final CompoundNBT sourceNbt = new CompoundNBT();
-                sourceNbt.putUniqueId(Constants.UUID, uuid);
-                spongeData.put(type.compoundKey, sourceNbt);
-            } else {
-                final CompoundNBT compoundTag = spongeData.getCompound(type.compoundKey);
-                compoundTag.putUniqueId(Constants.UUID, uuid);
-            }
-        }
+//        if (((DataCompoundHolder) this).data$hasSpongeCompound()) {
+//            final CompoundNBT spongeData = ((DataCompoundHolder) this).data$getSpongeDataCompound();
+//            if (uuid == null) {
+//                if (spongeData.contains(type.compoundKey)) {
+//                    spongeData.remove(type.compoundKey);
+//                }
+//                return;
+//            }
+//            if (!spongeData.contains(type.compoundKey)) {
+//                final CompoundNBT sourceNbt = new CompoundNBT();
+//                sourceNbt.putUniqueId(Constants.UUID, uuid);
+//                spongeData.put(type.compoundKey, sourceNbt);
+//            } else {
+//                final CompoundNBT compoundTag = spongeData.getCompound(type.compoundKey);
+//                compoundTag.putUniqueId(Constants.UUID, uuid);
+//            }
+//        }
     }
 
     @SuppressWarnings("ConstantConditions")

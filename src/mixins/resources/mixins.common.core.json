@@ -8,11 +8,14 @@
     "mixinPriority": 1101,
     "mixins": [
         "advancements.FunctionManagerMixin",
+        "block.BlockMixin",
         "command.CommandsMixin",
         "command.CommandSourceMixin",
         "command.arguments.ArgumentTypes_EntryMixin",
         "command.arguments.ArgumentTypesMixin",
+        "entity.ActiveChunkReferentMixin",
         "entity.EntityMixin",
+        "entity.EntityTypeMixin",
         "entity.LivingEntityMixin",
         "entity.item.minecart.MinecartCommandBlockEntity_MinecartCommandLogicMixin",
         "entity.player.PlayerEntityMixin",
@@ -23,9 +26,14 @@
         "service.permission.SubjectMixin",
         "tileentity.CommandBlockTileEntity_1Mixin",
         "tileentity.LecternTileEntityMixin",
+        "tileentity.PistonTileEntityMixin",
         "tileentity.SignTileEntityMixin",
-        "world.dimension.DimensionTypeMixin",
-        "util.datafix.versions.V1125Mixin"
+        "tileentity.TileEntityMixin",
+        "tileentity.TileEntityTypeMixin",
+        "util.datafix.versions.V1125Mixin",
+        "world.WorldMixin",
+        "world.chunk.ChunkMixin",
+        "world.dimension.DimensionTypeMixin"
     ],
     "client": [
         "client.MinecraftMixin"
