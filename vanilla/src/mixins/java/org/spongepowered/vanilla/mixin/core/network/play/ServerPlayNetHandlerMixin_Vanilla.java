@@ -24,32 +24,33 @@
  */
 package org.spongepowered.vanilla.mixin.core.network.play;
 
-import net.minecraft.entity.player.ServerPlayerEntity;
-import net.minecraft.network.PacketThreadUtil;
 import net.minecraft.network.play.IServerPlayNetHandler;
 import net.minecraft.network.play.ServerPlayNetHandler;
 import net.minecraft.network.play.client.CCustomPayloadPacket;
+import net.minecraft.server.MinecraftServer;
 import org.spongepowered.api.Sponge;
 import org.spongepowered.api.network.EngineConnection;
+import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
+import org.spongepowered.common.accessor.network.play.client.CCustomPayloadPacketAccessor;
 import org.spongepowered.common.network.channel.SpongeChannelRegistry;
 
 @Mixin(ServerPlayNetHandler.class)
 public abstract class ServerPlayNetHandlerMixin_Vanilla implements IServerPlayNetHandler {
 
-    @Shadow public ServerPlayerEntity player;
+    @Shadow @Final private MinecraftServer server;
 
-    @Inject(method = "processCustomPayload", at = @At(value = "HEAD"), cancellable = true)
+    @Inject(method = "processCustomPayload", at = @At(value = "HEAD"))
     private void onHandleCustomPayload(final CCustomPayloadPacket packet, final CallbackInfo ci) {
-        PacketThreadUtil.checkThreadAndEnqueue(packet, this, this.player.getServerWorld());
+        // For some reason, "CCustomPayloadPacket" is released in the processPacket
+        // method of its class, only applicable to this packet, so just retain here.
+        ((CCustomPayloadPacketAccessor) packet).accessor$getPayload().retain();
 
         final SpongeChannelRegistry channelRegistry = (SpongeChannelRegistry) Sponge.getChannelRegistry();
-        if (channelRegistry.handlePlayPayload((EngineConnection) this, packet)) {
-            ci.cancel();
-        }
+        this.server.execute(() -> channelRegistry.handlePlayPayload((EngineConnection) this, packet));
     }
 }
