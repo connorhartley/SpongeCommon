@@ -71,9 +71,10 @@ public abstract class WorldSettingsMixin implements WorldSettingsBridge {
     @Nullable private DataContainer generatorSettings;
 
     @Inject(method = "<init>(Lnet/minecraft/world/storage/WorldInfo;)V", at = @At(value = "RETURN"))
-    private void impl$reAssignValuesFromIncomingInfo(WorldInfo info, CallbackInfo ci) {
+    private void impl$reAssignValuesFromIncomingInfo(final WorldInfo info, final CallbackInfo ci) {
         final WorldProperties properties = (WorldProperties) info;
         if (((WorldInfoBridge) info).bridge$isValid()) {
+            this.dimensionType = (SpongeDimensionType) properties.getDimensionType();
             this.dimensionType = (SpongeDimensionType) properties.getDimensionType();
             this.difficulty = properties.getDifficulty();
             this.serializationBehavior = properties.getSerializationBehavior();
@@ -93,12 +94,12 @@ public abstract class WorldSettingsMixin implements WorldSettingsBridge {
     }
 
     @Override
-    public void bridge$setRandomSeed(boolean state) {
+    public void bridge$setRandomSeed(final boolean state) {
         this.seedRandomized = state;
     }
 
     @Inject(method = "setGeneratorOptions", at = @At(value = "RETURN"))
-    private void onSetGeneratorOptions(JsonElement element, CallbackInfoReturnable<WorldSettings> cir) {
+    private void onSetGeneratorOptions(final JsonElement element, final CallbackInfoReturnable<WorldSettings> cir) {
         // TODO 1.14 - JsonElement -> DataContainer
     }
 
@@ -126,7 +127,7 @@ public abstract class WorldSettingsMixin implements WorldSettingsBridge {
     }
 
     @Override
-    public void bridge$setPortalAgentType(PortalAgentType type) {
+    public void bridge$setPortalAgentType(final PortalAgentType type) {
         this.portalAgentType = type;
     }
 
@@ -169,62 +170,62 @@ public abstract class WorldSettingsMixin implements WorldSettingsBridge {
     }
 
     @Override
-    public void bridge$setKey(ResourceKey key) {
+    public void bridge$setKey(final ResourceKey key) {
         this.key = key;
     }
 
     @Override
-    public void bridge$setDimensionType(DimensionType dimensionType) {
+    public void bridge$setDimensionType(final DimensionType dimensionType) {
         this.dimensionType = (SpongeDimensionType) dimensionType;
     }
 
     @Override
-    public void bridge$setDifficulty(Difficulty difficulty) {
+    public void bridge$setDifficulty(final Difficulty difficulty) {
         this.difficulty = difficulty;
     }
 
     @Override
-    public void bridge$setSerializationBehavior(SerializationBehavior behavior) {
+    public void bridge$setSerializationBehavior(final SerializationBehavior behavior) {
         this.serializationBehavior = behavior;
     }
 
     @Override
-    public void bridge$setGeneratorSettings(DataContainer generatorSettings) {
+    public void bridge$setGeneratorSettings(final DataContainer generatorSettings) {
         // TODO DataContainer -> JsonElement
     }
 
     @Override
-    public void bridge$setEnabled(boolean state) {
+    public void bridge$setEnabled(final boolean state) {
         this.isEnabled = state;
     }
 
     @Override
-    public void bridge$setLoadOnStartup(boolean state) {
+    public void bridge$setLoadOnStartup(final boolean state) {
         this.loadOnStartup = state;
     }
 
     @Override
-    public void bridge$setKeepSpawnLoaded(@Nullable Boolean state) {
+    public void bridge$setKeepSpawnLoaded(@Nullable final Boolean state) {
         this.keepSpawnLoaded = state;
     }
 
     @Override
-    public void bridge$setGenerateSpawnOnLoad(boolean state) {
+    public void bridge$setGenerateSpawnOnLoad(final boolean state) {
         this.generateSpawnOnLoad = state;
     }
 
     @Override
-    public void bridge$setPVPEnabled(boolean state) {
+    public void bridge$setPVPEnabled(final boolean state) {
         this.pvpEnabled = state;
     }
 
     @Override
-    public void bridge$setCommandsEnabled(boolean state) {
+    public void bridge$setCommandsEnabled(final boolean state) {
         this.commandsAllowed = state;
     }
 
     @Override
-    public void bridge$setGenerateBonusChest(boolean state) {
+    public void bridge$setGenerateBonusChest(final boolean state) {
         this.bonusChestEnabled = state;
     }
 
@@ -234,7 +235,7 @@ public abstract class WorldSettingsMixin implements WorldSettingsBridge {
     }
 
     @Override
-    public void bridge$populateInfo(WorldInfo info) {
+    public void bridge$populateInfo(final WorldInfo info) {
         final WorldArchetype this$ = (WorldArchetype) (Object) this;
         final WorldInfoBridge infoBridge = (WorldInfoBridge) info;
 

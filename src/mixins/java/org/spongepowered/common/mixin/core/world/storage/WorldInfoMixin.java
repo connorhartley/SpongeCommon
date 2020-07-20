@@ -106,8 +106,13 @@ public abstract class WorldInfoMixin implements WorldInfoBridge {
     private boolean impl$hasCustomDifficulty = false;
     private boolean impl$isConstructing = false;
 
-    @Redirect(method = "<init>(Lnet/minecraft/world/WorldSettings;Ljava/lang/String;)V", at = @At(value = "INVOKE", target = "Lnet/minecraft/world/storage/WorldInfo;populateFromWorldSettings(Lnet/minecraft/world/WorldSettings;)V"))
-    private void impl$setupBeforeSettingsPopulation(WorldInfo info, WorldSettings settings, String levelName) {
+    @Redirect(method = "<init>(Lnet/minecraft/world/WorldSettings;Ljava/lang/String;)V",
+        at = @At(value = "INVOKE",
+            target = "Lnet/minecraft/world/storage/WorldInfo;populateFromWorldSettings(Lnet/minecraft/world/WorldSettings;)V"
+        )
+    )
+    private void impl$setupBeforeSettingsPopulation(final WorldInfo info, final WorldSettings settings, final WorldSettings ctorSettings,
+        final String levelName) {
         this.levelName = levelName;
         this.impl$isConstructing = true;
 
@@ -119,7 +124,7 @@ public abstract class WorldInfoMixin implements WorldInfoBridge {
     }
 
     @Inject(method = "populateFromWorldSettings", at = @At("RETURN"))
-    private void populatePropertiesFromArchetype(WorldSettings settings, CallbackInfo ci) {
+    private void populatePropertiesFromArchetype(final WorldSettings settings, final CallbackInfo ci) {
         if (!this.bridge$isValid() || this.impl$isConstructing) {
             return;
         }
@@ -235,7 +240,7 @@ public abstract class WorldInfoMixin implements WorldInfoBridge {
     }
 
     @Override
-    public void bridge$setEnabled(boolean state) {
+    public void bridge$setEnabled(final boolean state) {
         this.impl$enabled = state;
     }
 
@@ -245,7 +250,7 @@ public abstract class WorldInfoMixin implements WorldInfoBridge {
     }
 
     @Override
-    public void bridge$setPVPEnabled(boolean state) {
+    public void bridge$setPVPEnabled(final boolean state) {
         this.impl$pvp = state;
     }
 
@@ -260,7 +265,7 @@ public abstract class WorldInfoMixin implements WorldInfoBridge {
     }
 
     @Override
-    public void bridge$setGenerateBonusChest(boolean state) {
+    public void bridge$setGenerateBonusChest(final boolean state) {
         this.impl$generateBonusChest = state;
     }
 
@@ -270,7 +275,7 @@ public abstract class WorldInfoMixin implements WorldInfoBridge {
     }
 
     @Override
-    public void bridge$setLoadOnStartup(boolean state) {
+    public void bridge$setLoadOnStartup(final boolean state) {
         this.impl$loadOnStartup = state;
     }
 
@@ -280,7 +285,7 @@ public abstract class WorldInfoMixin implements WorldInfoBridge {
     }
 
     @Override
-    public void bridge$setKeepSpawnLoaded(boolean state) {
+    public void bridge$setKeepSpawnLoaded(final boolean state) {
         this.impl$keepSpawnLoaded = state;
     }
 
@@ -290,7 +295,7 @@ public abstract class WorldInfoMixin implements WorldInfoBridge {
     }
 
     @Override
-    public void bridge$setGenerateSpawnOnLoad(boolean state) {
+    public void bridge$setGenerateSpawnOnLoad(final boolean state) {
         this.impl$generateSpawnOnLoad = state;
     }
 
@@ -300,7 +305,7 @@ public abstract class WorldInfoMixin implements WorldInfoBridge {
     }
 
     @Override
-    public void bridge$setSerializationBehavior(SerializationBehavior behavior) {
+    public void bridge$setSerializationBehavior(final SerializationBehavior behavior) {
         this.impl$serializationBehavior = behavior;
     }
 
@@ -318,7 +323,7 @@ public abstract class WorldInfoMixin implements WorldInfoBridge {
     }
 
     @Override
-    public void bridge$setModCreated(boolean state) {
+    public void bridge$setModCreated(final boolean state) {
         this.impl$modCreated = state;
     }
 
@@ -365,7 +370,7 @@ public abstract class WorldInfoMixin implements WorldInfoBridge {
     }
 
     @Override
-    public void bridge$writeSpongeLevelData(CompoundNBT compound) {
+    public void bridge$writeSpongeLevelData(final CompoundNBT compound) {
 
         if (!this.bridge$isValid() || this.impl$uniqueId == null) {
             return;
@@ -409,7 +414,7 @@ public abstract class WorldInfoMixin implements WorldInfoBridge {
     }
 
     @Override
-    public void bridge$readSpongeLevelData(CompoundNBT compound) {
+    public void bridge$readSpongeLevelData(final CompoundNBT compound) {
         if (!compound.contains(Constants.Sponge.SPONGE_DATA)) {
             // TODO 1.14 - Bad Sponge level data...warn/crash?
             return;
