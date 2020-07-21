@@ -25,14 +25,12 @@
 package org.spongepowered.common.network.channel.packet;
 
 import com.google.common.collect.ImmutableList;
-import io.netty.handler.codec.CodecException;
-import io.netty.handler.codec.DecoderException;
-import io.netty.handler.codec.EncoderException;
 import org.checkerframework.checker.nullness.qual.Nullable;
 import org.spongepowered.api.ResourceKey;
 import org.spongepowered.api.network.EngineConnection;
 import org.spongepowered.api.network.channel.ChannelBuf;
 import org.spongepowered.api.network.channel.ChannelException;
+import org.spongepowered.api.network.channel.ChannelIOException;
 import org.spongepowered.api.network.channel.packet.FixedTransactionalPacketBinding;
 import org.spongepowered.api.network.channel.packet.HandlerPacketBinding;
 import org.spongepowered.api.network.channel.packet.Packet;
@@ -51,6 +49,7 @@ import java.util.Collection;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
@@ -73,16 +72,16 @@ public abstract class AbstractPacketChannel extends SpongeChannel implements Tra
 
         final P request;
         final SpongeTransactionalPacketBinding<P, R> binding;
-        final Consumer<Throwable> failure;
+        final CompletableFuture<?> future;
         final @Nullable Consumer<R> success;
 
         TransactionData(final P request, final SpongeTransactionalPacketBinding<P, R> binding,
                 final @Nullable Consumer<R> success,
-                final Consumer<Throwable> failure) {
+                final CompletableFuture<?> future) {
             this.request = request;
             this.binding = binding;
             this.success = success;
-            this.failure = failure;
+            this.future = future;
         }
     }
 
@@ -103,11 +102,7 @@ public abstract class AbstractPacketChannel extends SpongeChannel implements Tra
         try {
             packet.write(payload);
         } catch (final Throwable ex) {
-            if (ex instanceof CodecException) {
-                throw ex;
-            } else {
-                throw new EncoderException("Failed to encode " + packet.getClass(), ex);
-            }
+            throw new ChannelIOException("Failed to encode " + packet.getClass(), ex);
         }
     }
 
@@ -116,10 +111,8 @@ public abstract class AbstractPacketChannel extends SpongeChannel implements Tra
 
         try {
             packet.read(payload.slice());
-        } catch (final CodecException ex) {
-            throw ex;
         } catch (final Exception ex) {
-            throw new DecoderException("Failed to decode " + packet.getClass(), ex);
+            throw new ChannelIOException("Failed to decode " + packet.getClass(), ex);
         }
 
         return packet;
@@ -225,7 +218,7 @@ public abstract class AbstractPacketChannel extends SpongeChannel implements Tra
             try {
                 handler.handleResponse(response, request, connection);
             } catch (final Throwable t) {
-                SpongeCommon.getLogger().error("Failed to handle packet", t);
+                this.handleException(connection, new ChannelException("Failed to handle packet", t), null);
             }
         }
     }
@@ -237,7 +230,7 @@ public abstract class AbstractPacketChannel extends SpongeChannel implements Tra
             try {
                 handler.handleFailure(response, request, connection);
             } catch (final Throwable t) {
-                SpongeCommon.getLogger().error("Failed to handle packet", t);
+                this.handleException(connection, new ChannelException("Failed to handle packet failure", t), null);
             }
         }
     }
@@ -247,7 +240,7 @@ public abstract class AbstractPacketChannel extends SpongeChannel implements Tra
             try {
                 handler.handle(packet, connection);
             } catch (final Throwable t) {
-                SpongeCommon.getLogger().error("Failed to handle packet", t);
+                this.handleException(connection, new ChannelException("Failed to handle packet", t), null);
             }
         }
     }

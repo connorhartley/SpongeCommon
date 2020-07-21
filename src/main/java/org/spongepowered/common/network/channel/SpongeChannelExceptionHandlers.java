@@ -22,40 +22,24 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-package org.spongepowered.common.network.channel.packet;
+package org.spongepowered.common.network.channel;
 
-import org.spongepowered.api.network.channel.ChannelException;
-import org.spongepowered.api.network.channel.packet.Packet;
-import org.spongepowered.api.network.channel.packet.RequestPacketResponse;
+import org.spongepowered.api.network.EngineConnection;
+import org.spongepowered.api.network.channel.ChannelExceptionHandler;
 
-import java.util.Objects;
+public final class SpongeChannelExceptionHandlers implements ChannelExceptionHandler.Factory {
 
-public abstract class SpongeRequestPacketResponse<R extends Packet> implements RequestPacketResponse<R> {
+    public static final SpongeChannelExceptionHandlers INSTANCE = new SpongeChannelExceptionHandlers();
 
-    private boolean completed;
-
-    private void checkCompleted() {
-        if (this.completed) {
-            throw new ChannelException("The request response was already completed.");
+    private final ChannelExceptionHandler<EngineConnection> logEverything = (connection, channel, exception, future) -> {
+        ((SpongeChannel) channel).getLogger().error(exception);
+        if (future != null) {
+            future.completeExceptionally(exception);
         }
-        this.completed = true;
-    }
+    };
 
     @Override
-    public void fail(final ChannelException exception) {
-        Objects.requireNonNull(exception, "exception");
-        this.checkCompleted();
-        this.fail0(exception);
+    public ChannelExceptionHandler<EngineConnection> logEverything() {
+        return this.logEverything;
     }
-
-    protected abstract void fail0(ChannelException exception);
-
-    @Override
-    public void success(final R response) {
-        Objects.requireNonNull(response, "response");
-        this.checkCompleted();
-        this.success0(response);
-    }
-
-    protected abstract void success0(R response);
 }

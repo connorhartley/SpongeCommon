@@ -111,7 +111,7 @@ public class SpongeRawPlayDataChannel implements RawPlayDataChannel {
         try {
             payload = this.parent.encodePayload(consumer);
         } catch (final Throwable ex) {
-            future.completeExceptionally(ex);
+            this.parent.handleException(connection, ex, future);
             return future;
         }
 

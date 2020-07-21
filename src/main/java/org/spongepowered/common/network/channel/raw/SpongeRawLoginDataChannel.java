@@ -33,7 +33,6 @@ import org.spongepowered.api.network.channel.raw.RawDataChannel;
 import org.spongepowered.api.network.channel.raw.handshake.RawHandshakeDataChannel;
 import org.spongepowered.api.network.channel.raw.handshake.RawHandshakeDataRequestHandler;
 import org.spongepowered.api.network.channel.raw.handshake.RawHandshakeDataRequestResponse;
-import org.spongepowered.common.SpongeCommon;
 import org.spongepowered.common.network.channel.ConnectionUtil;
 import org.spongepowered.common.network.channel.PacketSender;
 import org.spongepowered.common.network.channel.PacketUtil;
@@ -94,7 +93,7 @@ public class SpongeRawLoginDataChannel implements RawHandshakeDataChannel {
 
             private void checkCompleted() {
                 if (this.completed) {
-                    throw new IllegalStateException("The request response was already completed.");
+                    throw new ChannelException("The request response was already completed.");
                 }
                 this.completed = true;
             }
@@ -114,7 +113,7 @@ public class SpongeRawLoginDataChannel implements RawHandshakeDataChannel {
                 try {
                     payload = parent.encodePayload(response);
                 } catch (final Throwable t) {
-                    SpongeCommon.getLogger().error("Failed to handle login data request", t);
+                    parent.handleException(connection, new ChannelException("Failed to encode login data response", t), null);
                     PacketSender.sendTo(connection, PacketUtil.createLoginPayloadResponse(null, transactionId));
                     return;
                 }
@@ -127,7 +126,7 @@ public class SpongeRawLoginDataChannel implements RawHandshakeDataChannel {
                 handler.handleRequest(payload, connection, response);
                 success = true;
             } catch (final Throwable t) {
-                SpongeCommon.getLogger().error("Failed to handle login data request", t);
+                parent.handleException(connection, new ChannelException("Failed to handle login data request", t), null);
             }
         }
         if (!success) {

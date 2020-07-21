@@ -24,7 +24,6 @@
  */
 package org.spongepowered.common.network.channel.packet;
 
-import io.netty.handler.codec.DecoderException;
 import net.minecraft.network.IPacket;
 import org.checkerframework.checker.nullness.qual.Nullable;
 import org.spongepowered.api.ResourceKey;
@@ -32,6 +31,7 @@ import org.spongepowered.api.network.ClientSideConnection;
 import org.spongepowered.api.network.EngineConnection;
 import org.spongepowered.api.network.channel.ChannelBuf;
 import org.spongepowered.api.network.channel.ChannelException;
+import org.spongepowered.api.network.channel.ChannelIOException;
 import org.spongepowered.api.network.channel.packet.Packet;
 import org.spongepowered.api.network.channel.packet.PacketBinding;
 import org.spongepowered.api.network.channel.packet.PacketDispatcher;
@@ -39,8 +39,8 @@ import org.spongepowered.api.network.channel.packet.RequestPacket;
 import org.spongepowered.api.network.channel.packet.RequestPacketHandler;
 import org.spongepowered.api.network.channel.packet.basic.BasicHandshakePacketDispatcher;
 import org.spongepowered.api.network.channel.packet.basic.BasicPacketChannel;
-import org.spongepowered.common.SpongeCommon;
 import org.spongepowered.common.network.channel.ChannelBuffers;
+import org.spongepowered.common.network.channel.ChannelExceptionUtil;
 import org.spongepowered.common.network.channel.ConnectionUtil;
 import org.spongepowered.common.network.channel.PacketSender;
 import org.spongepowered.common.network.channel.PacketUtil;
@@ -66,12 +66,12 @@ public final class SpongeBasicPacketChannel extends AbstractPacketChannel implem
                         "Request packets from the client to server are currently not supported for basic packet channels.");
             }
             final CompletableFuture<R> future = new CompletableFuture<>();
-            this.sendRequestTo(connection, packet, future::complete, null, future::completeExceptionally);
+            this.sendRequestTo(connection, packet, future::complete, null, future);
             return future;
         }
 
         private <P extends RequestPacket<R>, R extends Packet> void sendRequestTo(final EngineConnection connection, final P request,
-                final @Nullable Consumer<R> success, final @Nullable Runnable sendSuccess, final Consumer<Throwable> failure) {
+                final @Nullable Consumer<R> success, final @Nullable Runnable sendSuccess, final CompletableFuture<?> future) {
             final SpongeTransactionalPacketBinding<P, R> binding =
                     (SpongeTransactionalPacketBinding) requireBinding(request.getClass());
 
@@ -79,7 +79,7 @@ public final class SpongeBasicPacketChannel extends AbstractPacketChannel implem
             try {
                 payload = encodeLoginPayload(binding.getOpcode(), request);
             } catch (final Throwable ex) {
-                failure.accept(ex);
+                handleException(connection, ex, future);
                 return;
             }
 
@@ -89,11 +89,10 @@ public final class SpongeBasicPacketChannel extends AbstractPacketChannel implem
             final IPacket<?> mcPacket = PacketUtil.createLoginPayloadRequest(Constants.Channels.FML_LOGIN_WRAPPER_CHANNEL, payload, transactionId);
             PacketSender.sendTo(connection, mcPacket, sendFuture -> {
                 if (!sendFuture.isSuccess()) {
-                    // Failed before it could reach the client, so complete it
-                    // and remove it from the store
-                    failure.accept(sendFuture.cause());
+                    // Failed before it could reach the client
+                    handleException(connection, ChannelExceptionUtil.of(sendFuture.cause()), future);
                 } else {
-                    final TransactionData<P, R> transactionData = new TransactionData<>(request, binding, success, failure);
+                    final TransactionData<P, R> transactionData = new TransactionData<>(request, binding, success, future);
                     transactionStore.put(transactionId, SpongeBasicPacketChannel.this, transactionData);
                     if (sendSuccess != null) {
                         sendSuccess.run();
@@ -110,7 +109,7 @@ public final class SpongeBasicPacketChannel extends AbstractPacketChannel implem
             try {
                 payload = encodePayload(binding.getOpcode(), packet);
             } catch (final Throwable ex) {
-                future.completeExceptionally(ex);
+                handleException(connection, ChannelExceptionUtil.of(ex), future);
                 return future;
             }
 
@@ -132,7 +131,7 @@ public final class SpongeBasicPacketChannel extends AbstractPacketChannel implem
             if (packet instanceof RequestPacket) {
                 final CompletableFuture<Void> future = new CompletableFuture<>();
                 this.sendRequestTo(connection, (RequestPacket) packet,
-                        result -> {}, () -> future.complete(null), future::completeExceptionally);
+                        result -> {}, () -> future.complete(null), future);
                 return future;
             } else {
                 return this.sendNormalTo(connection, packet);
@@ -166,7 +165,7 @@ public final class SpongeBasicPacketChannel extends AbstractPacketChannel implem
             final PacketBinding<?> binding = requireBinding(packet.getClass());
 
             final CompletableFuture<Void> future = new CompletableFuture<>();
-            if (checkSupported(connection, future)) {
+            if (!checkSupported(connection, future)) {
                 return future;
             }
 
@@ -174,7 +173,7 @@ public final class SpongeBasicPacketChannel extends AbstractPacketChannel implem
             try {
                 payload = encodePayload(binding.getOpcode(), packet);
             } catch (final Throwable ex) {
-                future.completeExceptionally(ex);
+                handleException(connection, ex, future);
                 return future;
             }
 
@@ -274,15 +273,15 @@ public final class SpongeBasicPacketChannel extends AbstractPacketChannel implem
                             final IPacket<?> mcPacket = PacketUtil.createLoginPayloadResponse(responsePayload, transactionId);
                             PacketSender.sendTo(connection, mcPacket);
                         } catch (final Throwable ex) {
-                            SpongeCommon.getLogger().error("Failed to encode response packet", ex);
+                            handleException(connection, new ChannelIOException("Failed to encode response packet", ex), null);
                         }
                     }
                 };
                 try {
                     handler.handleRequest(packet, connection, response);
                     success = true;
-                } catch (final Throwable t) {
-                    SpongeCommon.getLogger().error("Failed to handle request packet", t);
+                } catch (final Throwable ex) {
+                    this.handleException(connection, new ChannelIOException("Failed to handle request packet", ex), null);
                 }
             }
             if (!success) {
@@ -321,7 +320,7 @@ public final class SpongeBasicPacketChannel extends AbstractPacketChannel implem
                     // opcode, so lookup using the opcode.
                     final SpongeHandlerPacketBinding<R> responseBinding = (SpongeHandlerPacketBinding<R>) this.byOpcode.get(opcode);
                     if (responseBinding == null) {
-                        throw new DecoderException("Unknown opcode " + opcode + " for channel " + getKey());
+                        throw new ChannelIOException("Unknown packet opcode: " + opcode);
                     }
                     responseConstructor = responseBinding.getPacketConstructor();
                 }
@@ -333,11 +332,11 @@ public final class SpongeBasicPacketChannel extends AbstractPacketChannel implem
 
                 this.handleResponse(connection, binding, request, responsePacket);
             } catch (final Throwable ex) {
-                transactionData.failure.accept(ex);
+                this.handleException(connection, ex, transactionData.future);
             }
         } else {
+            this.handleException(connection, result.getCause(), transactionData.future);
             this.handleResponseFailure(connection, binding, request, result.getCause());
-            transactionData.failure.accept(result.getCause());
         }
     }
 }

@@ -29,8 +29,8 @@ import net.minecraft.network.NetworkManager;
 import net.minecraft.network.login.IServerLoginNetHandler;
 import org.spongepowered.api.ResourceKey;
 import org.spongepowered.api.network.EngineConnection;
-import org.spongepowered.common.bridge.network.NetworkManagerHolderBridge;
 import org.spongepowered.common.bridge.network.NetworkManagerBridge;
+import org.spongepowered.common.bridge.network.NetworkManagerHolderBridge;
 
 import java.util.Set;
 

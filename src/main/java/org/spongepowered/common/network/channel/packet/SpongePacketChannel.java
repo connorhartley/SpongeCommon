@@ -24,7 +24,6 @@
  */
 package org.spongepowered.common.network.channel.packet;
 
-import io.netty.handler.codec.DecoderException;
 import net.minecraft.network.IPacket;
 import org.checkerframework.checker.nullness.qual.Nullable;
 import org.spongepowered.api.ResourceKey;
@@ -32,12 +31,12 @@ import org.spongepowered.api.network.EngineConnection;
 import org.spongepowered.api.network.EngineConnectionSide;
 import org.spongepowered.api.network.channel.ChannelBuf;
 import org.spongepowered.api.network.channel.ChannelException;
+import org.spongepowered.api.network.channel.ChannelIOException;
 import org.spongepowered.api.network.channel.NoResponseException;
 import org.spongepowered.api.network.channel.packet.Packet;
 import org.spongepowered.api.network.channel.packet.PacketChannel;
 import org.spongepowered.api.network.channel.packet.RequestPacket;
 import org.spongepowered.api.network.channel.packet.RequestPacketHandler;
-import org.spongepowered.common.SpongeCommon;
 import org.spongepowered.common.network.channel.ConnectionUtil;
 import org.spongepowered.common.network.channel.PacketSender;
 import org.spongepowered.common.network.channel.PacketUtil;
@@ -92,7 +91,7 @@ public class SpongePacketChannel extends AbstractPacketChannel implements Packet
     }
 
     private <P extends RequestPacket<R>, R extends Packet> void sendRequestPacketTo(final EngineConnection connection, final P packet,
-            final Consumer<Throwable> failure,
+            final CompletableFuture<?> future,
             final @Nullable Consumer<R> response,
             final @Nullable Runnable sendSuccess) {
         final SpongeTransactionalPacketBinding<P, R> binding =
@@ -126,21 +125,21 @@ public class SpongePacketChannel extends AbstractPacketChannel implements Packet
         try {
             this.encodePayload(payload, packet);
         } catch (final Throwable ex) {
-            failure.accept(ex);
+            this.handleException(connection, ex, future);
             return;
         }
 
         if (response != null) {
-            final TransactionData<P, R> transactionData = new TransactionData<>(packet, binding, response, failure);
+            final TransactionData<P, R> transactionData = new TransactionData<>(packet, binding, response, future);
             transactionStore.put(transactionId, this, transactionData);
         }
 
         final IPacket<?> mcPacket = mcPacketSupplier.get();
         PacketSender.sendTo(connection, mcPacket, sendFuture -> {
             if (!sendFuture.isSuccess()) {
+                this.handleException(connection, sendFuture.cause(), future);
                 // Failed before it could reach the client, so complete it
                 // and remove it from the store
-                failure.accept(sendFuture.cause());
                 if (response != null) {
                     transactionStore.remove(transactionId);
                 }
@@ -196,7 +195,7 @@ public class SpongePacketChannel extends AbstractPacketChannel implements Packet
         try {
             this.encodePayload(payload, packet);
         } catch (final Throwable ex) {
-            SpongeCommon.getLogger().error("Failed to encode response packet", ex);
+            this.handleException(connection, new ChannelIOException("Failed to encode request response", ex), null);
             return;
         }
 
@@ -246,7 +245,7 @@ public class SpongePacketChannel extends AbstractPacketChannel implements Packet
         if (!this.checkSupported(connection, future)) {
             return future;
         }
-        this.sendRequestPacketTo(connection, packet, future::completeExceptionally, future::complete, null);
+        this.sendRequestPacketTo(connection, packet, future, future::complete, null);
         return future;
     }
 
@@ -263,7 +262,7 @@ public class SpongePacketChannel extends AbstractPacketChannel implements Packet
         }
         if (packet instanceof RequestPacket) {
             this.sendRequestPacketTo(connection, (RequestPacket<Packet>) packet,
-                    future::completeExceptionally, null, () -> future.complete(null));
+                    future, null, () -> future.complete(null));
         } else {
             this.sendNormalPacketTo(connection, packet, future);
         }
@@ -292,8 +291,8 @@ public class SpongePacketChannel extends AbstractPacketChannel implements Packet
         try {
             request = this.decodePayload(binding.getPacketConstructor(), payload);
         } catch (final Throwable ex) {
-            SpongeCommon.getLogger().error("Failed to decode request packet", ex);
             this.sendResponsePacketTo(connection, null, null, transactionId);
+            this.handleException(connection, new ChannelIOException("Failed to decode request packet", ex), null);
             return;
         }
 
@@ -323,7 +322,7 @@ public class SpongePacketChannel extends AbstractPacketChannel implements Packet
                     handler.handleRequest((RequestPacket) request, connection, requestPacketResponse);
                     success = true;
                 } catch (final Throwable ex) {
-                    SpongeCommon.getLogger().error("Failed to handle request packet", ex);
+                    this.handleException(connection, new ChannelException("Failed to handle request packet", ex), null);
                     responseFailure = ex;
                 }
             }
@@ -363,7 +362,7 @@ public class SpongePacketChannel extends AbstractPacketChannel implements Packet
             final int opcode = payload.readVarInt();
             this.handleResponsePacket(connection, value, payload, opcode);
         } else {
-            throw new DecoderException("Unknown packet type: " + type);
+            this.handleException(connection, new ChannelIOException("Unknown packet type: " + type), null);
         }
     }
 
@@ -385,7 +384,7 @@ public class SpongePacketChannel extends AbstractPacketChannel implements Packet
         } else if (type == TYPE_DYNAMIC_RESPONSE) {
             this.handleResponsePacket(connection, transactionId, payload, value);
         } else {
-            throw new DecoderException("Unknown packet type: " + type);
+            this.handleException(connection, new ChannelIOException("Unknown packet type: " + type), null);
         }
     }
 
@@ -412,7 +411,7 @@ public class SpongePacketChannel extends AbstractPacketChannel implements Packet
                     this.handleTransactionResponse(connection, transactionData, result, value);
                 }
             } else {
-                throw new DecoderException("Unexpected type: " + type);
+                this.handleException(connection, new ChannelIOException("Unknown packet type: " + type), null);
             }
         }
     }
@@ -440,8 +439,7 @@ public class SpongePacketChannel extends AbstractPacketChannel implements Packet
             try {
                 packet = this.decodePayload(packetSupplier, payload);
             } catch (final Throwable ex) {
-                SpongeCommon.getLogger().error("Failed to decode packet", ex);
-                transactionData.failure.accept(ex);
+                this.handleException(connection, new ChannelIOException("Failed to decode packet", ex), transactionData.future);
                 return;
             }
 
@@ -455,9 +453,8 @@ public class SpongePacketChannel extends AbstractPacketChannel implements Packet
                 transactionData.success.accept(packet);
             }
         } else {
-            this.handleResponseFailure(connection, transactionData.binding,
-                    transactionData.request, result.getCause());
-            transactionData.failure.accept(result.getCause());
+            this.handleException(connection, result.getCause(), transactionData.future);
+            this.handleResponseFailure(connection, transactionData.binding, transactionData.request, result.getCause());
         }
     }
 

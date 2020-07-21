@@ -191,5 +191,11 @@ public final class ChannelTest {
                     this.logger.error("Failed to get a response to {}", pingPacket1, cause);
                     return null;
                 });
+
+        this.basicChannel.play().sendTo(connection, new PrintTextPacket("You successfully joined the server."))
+                .exceptionally(cause -> {
+                    this.logger.error(cause);
+                    return null;
+                });
     }
 }

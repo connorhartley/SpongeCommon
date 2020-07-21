@@ -26,6 +26,8 @@ package org.spongepowered.common.network.channel;
 
 import com.google.common.base.MoreObjects;
 import com.google.common.collect.Multimap;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.checkerframework.checker.nullness.qual.Nullable;
 import org.spongepowered.api.ResourceKey;
 import org.spongepowered.api.network.LocalPlayerConnection;
@@ -37,12 +39,15 @@ import org.spongepowered.api.network.ServerPlayerConnection;
 import org.spongepowered.api.network.ServerSideConnection;
 import org.spongepowered.api.network.channel.Channel;
 import org.spongepowered.api.network.channel.ChannelBuf;
+import org.spongepowered.api.network.channel.ChannelExceptionHandler;
 import org.spongepowered.api.network.channel.ChannelNotSupportedException;
+import org.spongepowered.common.SpongeCommon;
 
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Map;
+import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 
 @SuppressWarnings("unchecked")
@@ -50,10 +55,19 @@ public abstract class SpongeChannel implements Channel {
 
     private final ResourceKey key;
     private final SpongeChannelRegistry registry;
+    private final Logger logger;
+
+    private volatile ChannelExceptionHandler<EngineConnection> exceptionHandler =
+            ChannelExceptionHandler.logEverything().suppress(ChannelNotSupportedException.class);
 
     public SpongeChannel(final ResourceKey key, final SpongeChannelRegistry registry) {
         this.key = key;
         this.registry = registry;
+        this.logger = LogManager.getLogger("channel/" + key.getFormatted());
+    }
+
+    public Logger getLogger() {
+        return this.logger;
     }
 
     @Override
@@ -67,6 +81,12 @@ public abstract class SpongeChannel implements Channel {
     }
 
     @Override
+    public void setExceptionHandler(final ChannelExceptionHandler<EngineConnection> handler) {
+        Objects.requireNonNull(handler, "handler");
+        this.exceptionHandler = handler;
+    }
+
+    @Override
     public String toString() {
         return MoreObjects.toStringHelper(this)
                 .add("key", this.key)
@@ -75,7 +95,7 @@ public abstract class SpongeChannel implements Channel {
 
     public boolean checkSupported(final EngineConnection connection, final CompletableFuture<?> future) {
         if (!ConnectionUtil.getRegisteredChannels(connection).contains(this.getKey())) {
-            future.completeExceptionally(new ChannelNotSupportedException("The channel \"" + this.getKey() + "\" isn't supported."));
+            this.handleException(connection, new ChannelNotSupportedException("The channel \"" + this.getKey() + "\" isn't supported."), future);
             return false;
         }
         return true;
@@ -107,6 +127,14 @@ public abstract class SpongeChannel implements Channel {
      */
     protected abstract void handleTransactionResponse(EngineConnection connection, Object stored, TransactionResult result);
 
+    public void handleException(final EngineConnection connection, final Throwable cause, final @Nullable CompletableFuture<?> future) {
+        try {
+            this.exceptionHandler.handle(connection, this, ChannelExceptionUtil.of(cause), future);
+        } catch (final Throwable ex) {
+            SpongeCommon.getLogger().error("The exception handler of the channel " + this.getKey() + " failed to handle an exception.", ex);
+        }
+    }
+
     public static <C extends EngineConnection> Class<C> getConnectionClass(final EngineConnectionSide<C> side) {
         return (Class<C>) (side == EngineConnectionSide.CLIENT ? ClientSideConnection.class : ServerSideConnection.class);
     }
@@ -133,7 +161,6 @@ public abstract class SpongeChannel implements Channel {
         }
         return handler;
     }
-
 
     public static <H> Collection<H> getResponseHandlers(final EngineConnection connection, final Multimap<Class<?>, H> handlersMap) {
         Collection<H> handlers = null;

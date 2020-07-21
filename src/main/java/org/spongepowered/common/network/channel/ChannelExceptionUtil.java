@@ -22,40 +22,24 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-package org.spongepowered.common.network.channel.packet;
+package org.spongepowered.common.network.channel;
 
+import io.netty.handler.codec.CodecException;
 import org.spongepowered.api.network.channel.ChannelException;
-import org.spongepowered.api.network.channel.packet.Packet;
-import org.spongepowered.api.network.channel.packet.RequestPacketResponse;
+import org.spongepowered.api.network.channel.ChannelIOException;
 
-import java.util.Objects;
+public final class ChannelExceptionUtil {
 
-public abstract class SpongeRequestPacketResponse<R extends Packet> implements RequestPacketResponse<R> {
-
-    private boolean completed;
-
-    private void checkCompleted() {
-        if (this.completed) {
-            throw new ChannelException("The request response was already completed.");
+    public static ChannelException of(final Throwable cause) {
+        if (cause instanceof ChannelException) {
+            return (ChannelException) cause;
+        } else if (cause instanceof CodecException) {
+            return new ChannelIOException(cause);
+        } else {
+            return new ChannelException(cause);
         }
-        this.completed = true;
     }
 
-    @Override
-    public void fail(final ChannelException exception) {
-        Objects.requireNonNull(exception, "exception");
-        this.checkCompleted();
-        this.fail0(exception);
+    private ChannelExceptionUtil() {
     }
-
-    protected abstract void fail0(ChannelException exception);
-
-    @Override
-    public void success(final R response) {
-        Objects.requireNonNull(response, "response");
-        this.checkCompleted();
-        this.success0(response);
-    }
-
-    protected abstract void success0(R response);
 }

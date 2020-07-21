@@ -32,6 +32,7 @@ import net.minecraft.network.NetworkManager;
 import net.minecraft.network.play.server.SDisconnectPacket;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.management.PlayerList;
+import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.text.ITextComponent;
 import net.minecraft.util.text.TextFormatting;
 import net.minecraft.util.text.TranslationTextComponent;
@@ -72,7 +73,7 @@ public abstract class PlayerListMixin {
     @Shadow public abstract ITextComponent canPlayerLogin(SocketAddress socketAddress, com.mojang.authlib.GameProfile gameProfile);
 
     private void disconnectClient(final NetworkManager netManager, final @Nullable Component disconnectMessage, final @Nullable GameProfile profile) {
-        ITextComponent reason;
+        final ITextComponent reason;
         if (disconnectMessage != null) {
             reason = SpongeAdventure.asVanilla(disconnectMessage);
         } else {
@@ -110,14 +111,19 @@ public abstract class PlayerListMixin {
         }
 
         net.minecraft.world.server.ServerWorld mcWorld = server.getWorld(mcPlayer.dimension);
+
         //noinspection ConstantConditions
         if (mcWorld == null) {
+            SpongeCommon.getLogger().warn("The player \"{}\" was located in a world that isn't loaded "
+                            + "or doesn't exist. This is not safe so the player will be moved to the first available world.",
+                    mcPlayer.getGameProfile().getName());
             mcWorld = server.getWorlds().iterator().next();
+            final BlockPos spawnPoint = mcWorld.getSpawnPoint();
+            mcPlayer.setPosition(spawnPoint.getX() + 0.5, spawnPoint.getY(), spawnPoint.getZ() + 0.5);
         }
         mcPlayer.setWorld(mcWorld);
 
         final ServerPlayer player = (ServerPlayer) mcPlayer;
-
         final ServerLocation location = player.getServerLocation();
         final Vector3d rotation = player.getRotation();
         final ServerSideConnection connection = player.getConnection();
