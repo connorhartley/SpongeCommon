@@ -22,28 +22,28 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-package org.spongepowered.common.command.registrar.tree;
+package org.spongepowered.common.command.brigadier.tree;
 
-import com.mojang.brigadier.arguments.ArgumentType;
-import org.spongepowered.api.command.registrar.tree.ClientCompletionKey;
-import org.spongepowered.api.command.registrar.tree.CommandTreeBuilder;
+import com.mojang.brigadier.StringReader;
+import com.mojang.brigadier.builder.LiteralArgumentBuilder;
+import com.mojang.brigadier.context.CommandContextBuilder;
+import com.mojang.brigadier.exceptions.CommandSyntaxException;
+import net.minecraft.command.CommandSource;
+import org.spongepowered.common.command.brigadier.context.SpongeCommandContextBuilder;
 
-public class AmountCommandTreeBuilder<T extends CommandTreeBuilder<T>>
-        extends ArgumentCommandTreeBuilder<T> implements CommandTreeBuilder.AmountBase<T> {
+public final class SpongeFlagLiteralCommandNode extends SpongeLiteralCommandNode {
 
-    private ArgumentType<?> argumentType;
+    private final String key;
 
-    public AmountCommandTreeBuilder(final ClientCompletionKey<T> parameterType, final ArgumentType<?> argumentType) {
-        super(parameterType);
-        this.argumentType = argumentType;
+    public SpongeFlagLiteralCommandNode(final LiteralArgumentBuilder<CommandSource> argumentBuilder, final String key) {
+        super(argumentBuilder);
+        this.key = key;
     }
 
     @Override
-    protected ArgumentType<?> getArgumentType() {
-        return this.argumentType;
+    public void parse(final StringReader reader, final CommandContextBuilder<CommandSource> contextBuilder) throws CommandSyntaxException {
+        super.parse(reader, contextBuilder);
+        ((SpongeCommandContextBuilder) contextBuilder).addFlagInvocation(this.key);
     }
 
-    @Override public T single() {
-        return null;
-    }
 }

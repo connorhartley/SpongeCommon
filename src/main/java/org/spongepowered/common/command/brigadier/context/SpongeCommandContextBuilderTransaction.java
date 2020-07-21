@@ -29,6 +29,7 @@ import com.mojang.brigadier.context.CommandContextBuilder;
 import com.mojang.brigadier.context.ParsedArgument;
 import com.mojang.brigadier.context.StringRange;
 import com.mojang.brigadier.tree.CommandNode;
+import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
 import net.minecraft.command.CommandSource;
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.spongepowered.api.command.parameter.CommandContext;
@@ -64,6 +65,7 @@ public final class SpongeCommandContextBuilderTransaction implements CommandCont
     private WeakReference<SpongeCommandContextBuilder> builder;
     private SpongeCommandContextBuilder copyBuilder;
 
+    private final Object2IntOpenHashMap<String> flagCapture = new Object2IntOpenHashMap<>();
     private final LinkedList<Tuple<String, ParsedArgument<CommandSource, ?>>> withArgumentCapture = new LinkedList<>();
     private final LinkedList<CommandSource> withSourceCapture = new LinkedList<>();
     private final LinkedList<Tuple<CommandNode<CommandSource>, StringRange>> withNodeCapture = new LinkedList<>();
@@ -146,6 +148,11 @@ public final class SpongeCommandContextBuilderTransaction implements CommandCont
         builderRef.putEntry((SpongeParameterKey<? super T>) key, object);
     }
 
+    public void addFlagInvocation(final String flag) {
+        this.flagCapture.addTo(flag, 1);
+        this.copyBuilder.addFlagInvocation(flag);
+    }
+
     public SpongeCommandContextBuilder getCopyBuilder() {
         return this.copyBuilder;
     }
@@ -169,6 +176,7 @@ public final class SpongeCommandContextBuilderTransaction implements CommandCont
             this.withChildCapture.forEach(builderRef::withChild);
             this.withCommandCapture.forEach(builderRef::withCommand);
             this.putEntryCapture.forEach(x -> this.putEntryAbusingGenerics(builderRef, x.getFirst(), x.getSecond()));
+            this.flagCapture.forEach(builderRef::addFlagInvocation);
         }
 
         // we're clearing anyway!
@@ -182,6 +190,7 @@ public final class SpongeCommandContextBuilderTransaction implements CommandCont
         this.withCommandCapture.clear();
         this.withChildCapture.clear();
         this.putEntryCapture.clear();
+        this.flagCapture.clear();
         this.copyBuilder = null;
         this.builder = null;
     }

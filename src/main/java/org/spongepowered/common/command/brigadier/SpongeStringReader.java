@@ -26,18 +26,14 @@ package org.spongepowered.common.command.brigadier;
 
 import com.google.gson.Gson;
 import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.StringReader;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.TextComponent;
-import net.minecraft.nbt.*;
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.spongepowered.api.command.exception.ArgumentParseException;
 import org.spongepowered.api.command.parameter.ArgumentReader;
-
-import java.util.regex.Pattern;
 
 // ArgumentReader.Mutable specifies a non null getRead() method, StringReader suggests its
 // nullable - but it isn't. So we just need to suppress the warning.
