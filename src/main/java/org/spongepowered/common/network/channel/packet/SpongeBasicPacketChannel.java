@@ -183,8 +183,8 @@ public final class SpongeBasicPacketChannel extends AbstractPacketChannel implem
         }
     };
 
-    public SpongeBasicPacketChannel(final ResourceKey key, final SpongeChannelRegistry registry) {
-        super(key, registry);
+    public SpongeBasicPacketChannel(final int type, final ResourceKey key, final SpongeChannelRegistry registry) {
+        super(type, key, registry);
     }
 
     @Override

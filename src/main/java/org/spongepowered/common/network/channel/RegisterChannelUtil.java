@@ -34,23 +34,23 @@ import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.stream.Collectors;
 
-public final class RegisterChannelHelper {
+public final class RegisterChannelUtil {
 
     private static final char SEPARATOR = '\0';
-    private static final Splitter SPLITTER = Splitter.on(RegisterChannelHelper.SEPARATOR);
-    private static final Joiner JOINER = Joiner.on(RegisterChannelHelper.SEPARATOR);
+    private static final Splitter SPLITTER = Splitter.on(RegisterChannelUtil.SEPARATOR);
+    private static final Joiner JOINER = Joiner.on(RegisterChannelUtil.SEPARATOR);
 
     public static List<ResourceKey> decodePayload(final ChannelBuf payload) {
         final byte[] content = payload.readBytes(payload.available());
-        return RegisterChannelHelper.SPLITTER.splitToList(new String(content, StandardCharsets.UTF_8))
+        return RegisterChannelUtil.SPLITTER.splitToList(new String(content, StandardCharsets.UTF_8))
                 .stream().map(ResourceKey::resolve).collect(Collectors.toList());
     }
 
     public static ChannelBuf encodePayload(final Iterable<ResourceKey> keys) {
-        final String content = RegisterChannelHelper.JOINER.join(keys);
+        final String content = RegisterChannelUtil.JOINER.join(keys);
         return ChannelBuffers.wrap(Unpooled.wrappedBuffer(content.getBytes(StandardCharsets.UTF_8)));
     }
 
-    private RegisterChannelHelper() {
+    private RegisterChannelUtil() {
     }
 }

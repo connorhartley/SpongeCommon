@@ -86,8 +86,8 @@ public class SpongePacketChannel extends AbstractPacketChannel implements Packet
      */
     static final int NO_DYNAMIC_OPCODE = -1;
 
-    public SpongePacketChannel(final ResourceKey key, final SpongeChannelRegistry registry) {
-        super(key, registry);
+    public SpongePacketChannel(final int type, final ResourceKey key, final SpongeChannelRegistry registry) {
+        super(type, key, registry);
     }
 
     private <P extends RequestPacket<R>, R extends Packet> void sendRequestPacketTo(final EngineConnection connection, final P packet,

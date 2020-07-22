@@ -78,7 +78,7 @@ public abstract class ServerLoginNetHandlerMixin_Vanilla implements IServerLogin
             final ServerSideConnection connection = (ServerSideConnection) this;
             if (this.impl$handshakeState == HANDSHAKE_NOT_STARTED) {
                 this.impl$handshakeState = HANDSHAKE_SYNC_CHANNEL_REGISTRATIONS;
-                ((SpongeChannelRegistry) Sponge.getChannelRegistry()).sendLoginChannelRegistrations(connection).thenAccept(result -> {
+                ((SpongeChannelRegistry) Sponge.getChannelRegistry()).sendLoginChannelRegistry(connection).thenAccept(result -> {
                     final Cause cause = Cause.of(EventContext.empty(), this);
                     final ServerSideConnectionEvent.Handshake event =
                             SpongeEventFactory.createServerSideConnectionEventHandshake(cause, connection);
@@ -92,6 +92,14 @@ public abstract class ServerLoginNetHandlerMixin_Vanilla implements IServerLogin
                 }
             }
         }
+    }
+
+    @Inject(method = "tryAcceptPlayer", at = @At(value = "INVOKE",
+            target = "Lnet/minecraft/server/management/PlayerList;initializeConnectionToPlayer(Lnet/minecraft/network/NetworkManager;Lnet/minecraft/entity/player/ServerPlayerEntity;)V"))
+    private void impl$onTryAcceptPlayer_beforeInitPlayer(final CallbackInfo ci) {
+        final ServerSideConnection connection = (ServerSideConnection) this;
+        // Also send the channel registrations using the minecraft channel, for compatibility
+        ((SpongeChannelRegistry) Sponge.getChannelRegistry()).sendChannelRegistrations(connection);
     }
 
     @Inject(method = "processLoginStart", at = @At(value = "RETURN"))

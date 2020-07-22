@@ -41,8 +41,8 @@ public class SpongeRawDataChannel extends SpongeChannel implements RawDataChanne
     private final SpongeRawPlayDataChannel play = new SpongeRawPlayDataChannel(this);
     private final SpongeRawLoginDataChannel login = new SpongeRawLoginDataChannel(this);
 
-    public SpongeRawDataChannel(final ResourceKey key, final SpongeChannelRegistry registry) {
-        super(key, registry);
+    public SpongeRawDataChannel(final int type, final ResourceKey key, final SpongeChannelRegistry registry) {
+        super(type, key, registry);
     }
 
     @Override

@@ -1472,6 +1472,11 @@ public final class Constants {
         public static final ResourceKey FML_LOGIN_WRAPPER_CHANNEL = ResourceKey.of("fml", "loginwrapper");
 
         /**
+         * A sponge channel used to sync channel registry information.
+         */
+        public static final ResourceKey SPONGE_CHANNEL_REGISTRY = ResourceKey.sponge("channel_registry");
+
+        /**
          * A minecraft channel used to register channels keys.
          */
         public static final ResourceKey REGISTER_KEY = ResourceKey.minecraft("register");

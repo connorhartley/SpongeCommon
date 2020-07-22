@@ -59,8 +59,8 @@ public abstract class AbstractPacketChannel extends SpongeChannel implements Tra
     protected final Map<Class<?>, PacketBinding<?>> byType = new ConcurrentHashMap<>();
     protected final Map<Integer, PacketBinding<?>> byOpcode = new ConcurrentHashMap<>();
 
-    public AbstractPacketChannel(final ResourceKey key, final SpongeChannelRegistry registry) {
-        super(key, registry);
+    public AbstractPacketChannel(final int type, final ResourceKey key, final SpongeChannelRegistry registry) {
+        super(type, key, registry);
     }
 
     @Override

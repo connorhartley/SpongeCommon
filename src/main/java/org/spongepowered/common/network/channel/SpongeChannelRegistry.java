@@ -46,6 +46,7 @@ import org.spongepowered.api.network.channel.packet.PacketChannel;
 import org.spongepowered.api.network.channel.packet.basic.BasicPacketChannel;
 import org.spongepowered.api.network.channel.raw.RawDataChannel;
 import org.spongepowered.api.registry.DuplicateRegistrationException;
+import org.spongepowered.api.util.Tuple;
 import org.spongepowered.common.SpongeCommon;
 import org.spongepowered.common.accessor.network.login.client.CCustomPayloadLoginPacketAccessor;
 import org.spongepowered.common.accessor.network.login.server.SCustomPayloadLoginPacketAccessor;
@@ -64,31 +65,36 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
-import java.util.function.BiFunction;
+import java.util.function.BiConsumer;
 
 @SuppressWarnings("unchecked")
 public class SpongeChannelRegistry implements ChannelRegistry {
 
-    private final Map<ResourceKey, Channel> channels = new HashMap<>();
-    private final Map<Class<?>, BiFunction<ResourceKey, SpongeChannelRegistry, Channel>> channelBuilders = new HashMap<>();
+    private final Map<ResourceKey, SpongeChannel> channels = new HashMap<>();
+    private final Map<Class<?>, Tuple<Integer, CreateFunction<SpongeChannel>>> channelBuilders = new HashMap<>();
 
     private final ChannelBufferAllocator bufferAllocator;
 
     public SpongeChannelRegistry(final ChannelBufferAllocator bufferAllocator) {
         this.bufferAllocator = bufferAllocator;
 
-        this.registerChannelType(RawDataChannel.class, SpongeRawDataChannel::new);
-        this.registerChannelType(BasicPacketChannel.class, SpongeBasicPacketChannel::new);
-        this.registerChannelType(PacketChannel.class, SpongePacketChannel::new);
+        this.registerChannelType(0, RawDataChannel.class, SpongeRawDataChannel::new);
+        this.registerChannelType(1, PacketChannel.class, SpongePacketChannel::new);
+        this.registerChannelType(2, BasicPacketChannel.class, SpongeBasicPacketChannel::new);
     }
 
     public ChannelBufferAllocator getBufferAllocator() {
         return this.bufferAllocator;
     }
 
-    private <T extends Channel> void registerChannelType(
-            final Class<T> channelType, final BiFunction<ResourceKey, SpongeChannelRegistry, T> builder) {
-        this.channelBuilders.put(channelType, (BiFunction<ResourceKey, SpongeChannelRegistry, Channel>) builder);
+    interface CreateFunction<C extends Channel> {
+
+        C create(int type, ResourceKey key, SpongeChannelRegistry registry);
+    }
+
+    private <T extends Channel> void registerChannelType(final int id,
+            final Class<T> channelType, final CreateFunction<? extends T> builder) {
+        this.channelBuilders.put(channelType, Tuple.of(id, (CreateFunction<SpongeChannel>) builder));
     }
 
     public <C extends Channel> C createChannel(final ResourceKey channelKey, final Class<C> channelType) throws DuplicateRegistrationException {
@@ -97,11 +103,11 @@ public class SpongeChannelRegistry implements ChannelRegistry {
         if (this.channels.containsKey(channelKey)) {
             throw new DuplicateRegistrationException("The channel key \"" + channelKey + "\" is already in use.");
         }
-        final BiFunction<ResourceKey, SpongeChannelRegistry, Channel> builder = this.channelBuilders.get(channelType);
-        if (builder == null) {
+        final Tuple<Integer, CreateFunction<SpongeChannel>> tuple = this.channelBuilders.get(channelType);
+        if (tuple == null) {
             throw new IllegalArgumentException("Unsupported channel type: " + channelType);
         }
-        final Channel channel = builder.apply(channelKey, this);
+        final SpongeChannel channel = tuple.getSecond().create(tuple.getFirst(), channelKey, this);
         this.channels.put(channelKey, channel);
         return (C) channel;
     }
@@ -132,11 +138,11 @@ public class SpongeChannelRegistry implements ChannelRegistry {
         return ImmutableList.copyOf(this.channels.values());
     }
 
-    private static final class ChannelRegistrationsResult {
+    private static final class ChannelRegistrySyncFuture {
 
         private final CompletableFuture<Void> future;
 
-        private ChannelRegistrationsResult(final CompletableFuture<Void> future) {
+        private ChannelRegistrySyncFuture(final CompletableFuture<Void> future) {
             this.future = future;
         }
     }
@@ -169,16 +175,16 @@ public class SpongeChannelRegistry implements ChannelRegistry {
      *
      * @param connection The connection to send the registrations to
      */
-    public CompletableFuture<Void> sendLoginChannelRegistrations(final EngineConnection connection) {
+    public CompletableFuture<Void> sendLoginChannelRegistry(final EngineConnection connection) {
         final CompletableFuture<Void> future = new CompletableFuture<>();
 
         final TransactionStore store = ConnectionUtil.getTransactionStore(connection);
         final int transactionId = store.nextId();
 
-        store.put(transactionId, null, new ChannelRegistrationsResult(future));
+        store.put(transactionId, null, new ChannelRegistrySyncFuture(future));
 
-        final ChannelBuf payload = RegisterChannelHelper.encodePayload(this.channels.keySet());
-        final IPacket<?> mcPacket = PacketUtil.createLoginPayloadRequest(Constants.Channels.REGISTER_KEY, payload, transactionId);
+        final ChannelBuf payload = this.encodeChannelRegistry();
+        final IPacket<?> mcPacket = PacketUtil.createLoginPayloadRequest(Constants.Channels.SPONGE_CHANNEL_REGISTRY, payload, transactionId);
         PacketSender.sendTo(connection, mcPacket, sendFuture -> {
             if (!sendFuture.isSuccess()) {
                 future.completeExceptionally(sendFuture.cause());
@@ -186,6 +192,47 @@ public class SpongeChannelRegistry implements ChannelRegistry {
         });
 
         return future;
+    }
+
+    public void sendChannelRegistrations(final EngineConnection connection) {
+        final ChannelBuf payload = RegisterChannelUtil.encodePayload(this.channels.keySet());
+        final IPacket<?> mcPacket = PacketUtil.createPlayPayload(Constants.Channels.REGISTER_KEY, payload, connection.getSide());
+        PacketSender.sendTo(connection, mcPacket);
+    }
+
+    /**
+     * Encodes the sponge channel registry. Sending the channel registry will
+     * override all known channel entries for the connection. Sending
+     * "minecraft:register" packets afterwards is still possible to add channels.
+     *
+     * @return The encoded payload
+     */
+    private ChannelBuf encodeChannelRegistry() {
+        final List<SpongeChannel> channels = ImmutableList.copyOf(this.channels.values());
+
+        final ChannelBuf buf = this.bufferAllocator.buffer();
+        buf.writeVarInt(channels.size());
+        for (final SpongeChannel channel : channels) {
+            buf.writeString(channel.getKey().getFormatted());
+            // The type is included to provide extra information for e.g. proxies
+            // who want to improve sponge support
+            // Not used by sponge itself
+            buf.writeByte((byte) channel.getType());
+        }
+
+        return buf;
+    }
+
+    private void handleChannelRegistry(final EngineConnection connection, final ChannelBuf payload) {
+        final Set<ResourceKey> registered = ConnectionUtil.getRegisteredChannels(connection);
+        registered.clear();
+
+        final int count = payload.readVarInt();
+        for (int i = 0; i < count; i++) {
+            final ResourceKey key = ResourceKey.resolve(payload.readString());
+            payload.readByte(); // type
+            registered.add(key);
+        }
     }
 
     public boolean handlePlayPayload(final EngineConnection connection, final CCustomPayloadPacket packet) {
@@ -206,30 +253,30 @@ public class SpongeChannelRegistry implements ChannelRegistry {
         return this.handlePlayPayload(connection, channel, payload);
     }
 
-    private void handleRegisterChannel(final EngineConnection connection, final ChannelBuf payload, final boolean unregister) {
+    private void handleRegisterChannel(final EngineConnection connection, final ChannelBuf payload,
+            final BiConsumer<Set<ResourceKey>, List<ResourceKey>> consumer) {
         final Set<ResourceKey> registered = ConnectionUtil.getRegisteredChannels(connection);
         final int readerIndex = payload.readerIndex();
         try {
-            final List<ResourceKey> modified = RegisterChannelHelper.decodePayload(payload);
-            if (unregister) {
-                registered.removeAll(modified);
-            } else {
-                registered.addAll(modified);
-            }
+            final List<ResourceKey> modified = RegisterChannelUtil.decodePayload(payload);
+            consumer.accept(registered, modified);
         } finally {
             payload.readerIndex(readerIndex);
         }
     }
 
     private boolean handlePlayPayload(final EngineConnection connection, final ResourceKey channelKey, final ChannelBuf payload) {
-        if (channelKey.equals(Constants.Channels.REGISTER_KEY)) {
-            this.handleRegisterChannel(connection, payload, false);
+        if (channelKey.equals(Constants.Channels.SPONGE_CHANNEL_REGISTRY)) {
+            this.handleChannelRegistry(connection, payload);
+            return true;
+        } else if (channelKey.equals(Constants.Channels.REGISTER_KEY)) {
+            this.handleRegisterChannel(connection, payload, Set::addAll);
             return true;
         } else if (channelKey.equals(Constants.Channels.UNREGISTER_KEY)) {
-            this.handleRegisterChannel(connection, payload, true);
+            this.handleRegisterChannel(connection, payload, Set::removeAll);
             return true;
         }
-        final SpongeChannel channel = (SpongeChannel) this.channels.get(channelKey);
+        final SpongeChannel channel = this.channels.get(channelKey);
         if (channel != null) {
             try {
                 channel.handlePlayPayload(connection, payload);
@@ -259,10 +306,10 @@ public class SpongeChannelRegistry implements ChannelRegistry {
 
     private boolean handleLoginRequestPayload(final EngineConnection connection, final ResourceKey channelKey,
             final int transactionId, final ChannelBuf payload) {
-        if (channelKey.equals(Constants.Channels.REGISTER_KEY)) {
-            this.handleRegisterChannel(connection, payload, false);
+        if (channelKey.equals(Constants.Channels.SPONGE_CHANNEL_REGISTRY)) {
+            this.handleChannelRegistry(connection, payload);
             // Respond with registered channels
-            final ChannelBuf responsePayload = RegisterChannelHelper.encodePayload(this.channels.keySet());
+            final ChannelBuf responsePayload = this.encodeChannelRegistry();
             final IPacket<?> mcPacket = PacketUtil.createLoginPayloadResponse(responsePayload, transactionId);
             PacketSender.sendTo(connection, mcPacket);
             return true;
@@ -274,7 +321,7 @@ public class SpongeChannelRegistry implements ChannelRegistry {
             final int length = payload.readVarInt();
             actualPayload = payload.readSlice(length);
         }
-        final SpongeChannel channel = (SpongeChannel) this.channels.get(actualChannelKey);
+        final SpongeChannel channel = this.channels.get(actualChannelKey);
         if (channel != null) {
             channel.handleLoginRequestPayload(connection, transactionId, actualPayload);
             return true;
@@ -316,11 +363,11 @@ public class SpongeChannelRegistry implements ChannelRegistry {
         if (entry == null) {
             return;
         }
-        if (entry.getData() instanceof ChannelRegistrationsResult) {
+        if (entry.getData() instanceof ChannelRegistrySyncFuture) {
             if (payload != null) {
-                this.handleRegisterChannel(connection, payload, false);
+                this.handleChannelRegistry(connection, payload);
             }
-            ((ChannelRegistrationsResult) entry.getData()).future.complete(null);
+            ((ChannelRegistrySyncFuture) entry.getData()).future.complete(null);
             return;
         }
         final TransactionResult result = payload == null ? TransactionResult.failure(new NoResponseException())

@@ -56,14 +56,20 @@ public abstract class SpongeChannel implements Channel {
     private final ResourceKey key;
     private final SpongeChannelRegistry registry;
     private final Logger logger;
+    private final int type;
 
     private volatile ChannelExceptionHandler<EngineConnection> exceptionHandler =
             ChannelExceptionHandler.logEverything().suppress(ChannelNotSupportedException.class);
 
-    public SpongeChannel(final ResourceKey key, final SpongeChannelRegistry registry) {
+    public SpongeChannel(final int type, final ResourceKey key, final SpongeChannelRegistry registry) {
+        this.type = type;
         this.key = key;
         this.registry = registry;
         this.logger = LogManager.getLogger("channel/" + key.getFormatted());
+    }
+
+    public int getType() {
+        return this.type;
     }
 
     public Logger getLogger() {
